@@ -1,0 +1,43 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{template "title" .}} - Go Template Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navbar -->
+        <header class="navbar">
+            <div class="navbar-brand">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-title">Go Template Dashboard</span>
+                <span class="badge badge-accent">Production Ready</span>
+            </div>
+            <nav class="navbar-nav">
+                <a href="/" class="nav-link active">ダッシュボード</a>
+                <a href="/v1/system/healthz" target="_blank" class="nav-link">Health API</a>
+                <a href="/metrics" target="_blank" class="nav-link">Prometheus Metrics</a>
+            </nav>
+            <div class="navbar-status">
+                <span class="status-indicator status-online"></span>
+                <span class="status-text">SYSTEM ONLINE</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {{template "content" .}}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Go Production Template &bull; Standalone HTMX UI &bull; Air-Gapped Ready</p>
+        </footer>
+    </div>
+</body>
+</html>
+{{end}}

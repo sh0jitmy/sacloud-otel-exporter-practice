@@ -1,0 +1,23 @@
+{{template "layout" .}}
+
+{{define "title"}}統合監視ダッシュボード{{end}}
+
+{{define "content"}}
+<div class="dashboard-grid">
+    <!-- Top System Metrics (Polled via HTMX every 5s) -->
+    <section class="metrics-section" id="system-metrics-container" hx-get="/ui/components/system-metrics" hx-trigger="every 5s" hx-swap="innerHTML">
+        {{template "system_metrics" .}}
+    </section>
+
+    <!-- Main 2-column Grid: Users Table & Backups Panel -->
+    <div class="two-column-grid">
+        <section class="card-section" id="users-table-container" hx-get="/ui/components/users-table" hx-trigger="every 10s" hx-swap="innerHTML">
+            {{template "users_table" .}}
+        </section>
+
+        <section class="card-section" id="backup-panel-container">
+            {{template "backup_panel" .}}
+        </section>
+    </div>
+</div>
+{{end}}

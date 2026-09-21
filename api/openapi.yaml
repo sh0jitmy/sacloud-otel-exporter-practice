@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: Secure Go Template API
+  description: A secure and production-ready HTTP API server demonstrating slog masking, Bearer auth, and ent SQLite database.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: http://localhost:8080/v1
+    description: Local development server
+tags:
+  - name: Authentication
+    description: Authentication related endpoints.
+  - name: Users
+    description: User related endpoints.
+  - name: System
+    description: System observability, health, backup, and maintenance endpoints.
+paths:
+  /v1/system/healthz:
+    get:
+      summary: Liveness probe
+      description: Check if the application server process is alive and responsive.
+      operationId: getHealthz
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /v1/system/readyz:
+    get:
+      summary: Readiness probe
+      description: Check if the database connection and critical components are ready for traffic.
+      operationId: getReadyz
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: System is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /v1/system/backups:
+    get:
+      summary: List backup archives
+      description: Retrieve list of available database backup archives.
+      operationId: listBackups
+      tags:
+        - System
+      responses:
+        '200':
+          description: List of backups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupResponse'
+    post:
+      summary: Create database backup
+      description: Trigger full database backup archive creation with SHA256 verification.
+      operationId: createBackup
+      tags:
+        - System
+      responses:
+        '200':
+          description: Backup created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupResponse'
+        '500':
+          description: Failed to create backup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /v1/system/backups/{filename}:
+    get:
+      summary: Download backup archive
+      description: Download a generated database backup tar.gz archive.
+      operationId: downloadBackup
+      tags:
+        - System
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          description: The name of the backup archive file
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Backup archive binary stream
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Backup file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /v1/system/restores:
+    post:
+      summary: Restore database from backup
+      description: Perform transactional database restore from a backup archive.
+      operationId: restoreBackup
+      tags:
+        - System
+      requestBody:
+        description: Restore parameters
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreRequest'
+      responses:
+        '200':
+          description: Restore completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResponse'
+        '400':
+          description: Invalid request or corrupted archive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Internal restore failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /v1/system/purge:
+    post:
+      summary: Purge expired retention records
+      description: Purge records older than specified retention days.
+      operationId: purgeRecords
+      tags:
+        - System
+      requestBody:
+        description: Purge parameters
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurgeRequest'
+      responses:
+        '200':
+          description: Purge operation finished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurgeResponse'
+
+  /v1/login:
+    post:
+      summary: User login
+      description: Authenticate a user with username and password, returning a JWT token.
+      operationId: login
+      tags:
+        - Authentication
+      requestBody:
+        description: User credentials for authentication
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /v1/users/me:
+    get:
+      summary: Get current authenticated user
+      description: Retrieve profile information for the currently authenticated user session.
+      operationId: getMe
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthResponse:
+      type: object
+      description: Health status response.
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: OK
+        timestamp:
+          type: string
+          format: date-time
+          example: 2026-09-18T07:00:00Z
+    BackupResponse:
+      type: object
+      description: Database backup result information.
+      required:
+        - filename
+        - download_url
+      properties:
+        filename:
+          type: string
+          example: backup_20260918_070000.tar.gz
+        download_url:
+          type: string
+          example: /v1/system/backups/backup_20260918_070000.tar.gz
+        size_bytes:
+          type: integer
+          example: 1024
+    RestoreRequest:
+      type: object
+      description: Restore request payload.
+      required:
+        - archive_path
+      properties:
+        archive_path:
+          type: string
+          description: Relative filename or absolute path of the backup archive.
+          example: backup_20260918_070000.tar.gz
+    RestoreResponse:
+      type: object
+      description: Restore operation result summary.
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          example: true
+        restored_at:
+          type: string
+          format: date-time
+          example: 2026-09-18T07:05:00Z
+        message:
+          type: string
+          example: Database restored successfully
+    PurgeRequest:
+      type: object
+      description: Parameters for data purge.
+      properties:
+        retention_days:
+          type: integer
+          default: 30
+          example: 30
+    PurgeResponse:
+      type: object
+      description: Data purge operation summary.
+      required:
+        - purged_count
+      properties:
+        purged_count:
+          type: integer
+          example: 0
+        retention_days:
+          type: integer
+          example: 30
+        message:
+          type: string
+          example: Data retention purge completed successfully
+    LoginRequest:
+      type: object
+      description: The payload containing credentials to log in.
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: The username of the user.
+          example: admin
+        password:
+          type: string
+          description: The user password.
+          example: SuperSecretPassword123
+    LoginResponse:
+      type: object
+      description: The response payload after a successful login.
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: JWT token for Bearer authentication.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    User:
+      type: object
+      description: Represents a user profile in the system.
+      required:
+        - id
+        - username
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the user.
+          example: 42
+        username:
+          type: string
+          description: The unique handle of the user.
+          example: john_doe
+    ProblemDetails:
+      type: object
+      description: A standard RFC7807 error representation.
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          description: A URI reference that identifies the problem type.
+          example: https://example.com/errors/invalid-parameters
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type.
+          example: Invalid Request Parameters
+        status:
+          type: integer
+          description: The HTTP status code generated by the origin server.
+          example: 400
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem.
+          example: The username field must not be empty.

@@ -1,0 +1,75 @@
+version: 2
+project_name: go_sh0jitmy_template
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: app
+    binary: app
+    main: ./cmd/app
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/shjtmy/go_sh0jitmy_template/internal/version.Version={{.Version}}
+      - -X github.com/shjtmy/go_sh0jitmy_template/internal/version.Commit={{.Commit}}
+      - -X github.com/shjtmy/go_sh0jitmy_template/internal/version.Date={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+  - id: web
+    binary: web
+    main: ./cmd/web
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/shjtmy/go_sh0jitmy_template/internal/version.Version={{.Version}}
+      - -X github.com/shjtmy/go_sh0jitmy_template/internal/version.Commit={{.Commit}}
+      - -X github.com/shjtmy/go_sh0jitmy_template/internal/version.Date={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs?:'
+      - '^test:'

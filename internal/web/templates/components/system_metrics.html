@@ -1,0 +1,36 @@
+{{define "system_metrics"}}
+<div class="stats-cards-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Process CPU Usage</span>
+            <span class="stat-badge">LIVE</span>
+        </div>
+        <div class="stat-value" id="val-cpu">{{printf "%.1f" .CPUUsage}}%</div>
+        <div class="stat-sub">OS Runtime Threads</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Memory Allocation</span>
+            <span class="stat-badge">RAM</span>
+        </div>
+        <div class="stat-value" id="val-mem">{{.MemAllocMB}} MB</div>
+        <div class="stat-sub">Heap Sys: {{.MemSysMB}} MB</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Active Goroutines</span>
+            <span class="stat-badge">GO</span>
+        </div>
+        <div class="stat-value" id="val-goroutines">{{.Goroutines}}</div>
+        <div class="stat-sub">Lightweight Threads</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">HTTP Requests Rate</span>
+            <span class="stat-badge">OTel</span>
+        </div>
+        <div class="stat-value" id="val-reqs">{{.RequestCount}} reqs</div>
+        <div class="stat-sub">Prometheus Metered</div>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,126 @@
+name: template-stack
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: template-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_DRIVER=postgres
+      - DATABASE_URL=postgres://template_user:template_secret@postgres:5432/template_db?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/system/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - template-net
+    logging: *default-logging
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: template-web
+    entrypoint: ["/usr/local/bin/web"]
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_DRIVER=postgres
+      - DATABASE_URL=postgres://template_user:template_secret@postgres:5432/template_db?sslmode=disable
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - template-net
+    logging: *default-logging
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: template-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: template_db
+      POSTGRES_USER: template_user
+      POSTGRES_PASSWORD: template_secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U template_user -d template_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - template-net
+    logging: *default-logging
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.99.0
+    container_name: template-victoriametrics
+    restart: unless-stopped
+    ports:
+      - "8428:8428"
+    volumes:
+      - ./deploy/victoriametrics/prometheus.yml:/etc/prometheus.yml:ro
+      - vmdata:/victoria-metrics-data
+    command:
+      - "-promscrape.config=/etc/prometheus.yml"
+      - "-promscrape.config.strictParse=false"
+      - "-storageDataPath=/victoria-metrics-data"
+      - "-retentionPeriod=1"
+    networks:
+      - template-net
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: template-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - victoriametrics
+      - postgres
+    networks:
+      - template-net
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  vmdata:
+
+networks:
+  template-net:
+    driver: bridge

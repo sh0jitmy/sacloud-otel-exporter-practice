@@ -1,0 +1,26 @@
+{{define "backup_panel"}}
+<div class="panel-card">
+    <div class="panel-header">
+        <h2>データベースバックアップ</h2>
+        <button class="btn btn-primary" hx-post="/ui/actions/create-backup" hx-target="#backup-list" hx-swap="outerHTML">
+            ＋ 新規バックアップ作成
+        </button>
+    </div>
+    <p class="panel-desc">SQLiteデータベースの完全暗号化スナップショット（tar.gz + SHA256チェックサム）</p>
+    <div id="backup-list" class="backup-list-container">
+        {{range .Backups}}
+        <div class="backup-item">
+            <div class="backup-info">
+                <span class="backup-name font-mono">{{.Filename}}</span>
+                <span class="backup-meta text-muted">{{.SizeBytes}} bytes</span>
+            </div>
+            <div class="backup-actions">
+                <a href="{{.DownloadURL}}" download class="btn btn-sm btn-outline">ダウンロード</a>
+            </div>
+        </div>
+        {{else}}
+        <div class="empty-state text-muted">作成されたバックアップはまだありません</div>
+        {{end}}
+    </div>
+</div>
+{{end}}

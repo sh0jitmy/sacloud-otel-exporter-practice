@@ -1,0 +1,376 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 1,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "🖥️ System Resources & Network Bandwidth (CPU / Memory / Throughput)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "CPU %",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 80 }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max", "mean"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "title": "Process CPU Usage (%)",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "rate(process_cpu_seconds_total[1m]) * 100", "legendFormat": "CPU Usage", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 25, "gradientMode": "opacity", "lineInterpolation": "smooth", "lineWidth": 2 },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] } },
+      "title": "Process Memory Allocation (Heap & Sys)",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "go_memstats_alloc_bytes", "legendFormat": "Heap Alloc (In-Use)", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "go_memstats_sys_bytes", "legendFormat": "Total System Memory", "refId": "B" },
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "process_resident_memory_bytes", "legendFormat": "Process RSS", "refId": "C" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineInterpolation": "smooth", "lineWidth": 2 },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] } },
+      "title": "SNMP Traffic & Network Bandwidth",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "rate(musubi_snmp_traffic_bytes_total[1m])", "legendFormat": "{{target}} ({{direction}})", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "rate(promhttp_metric_handler_requests_total[1m]) * 1024", "legendFormat": "HTTP API Bandwidth", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "title": "Active Goroutines",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "go_goroutines", "refId": "A" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 200,
+      "title": "🎯 Target Specific Telemetry & Latest MIB Data",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": true,
+            "inspect": true
+          }
+        }
+      },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 8 },
+      "id": 5,
+      "options": {
+        "footer": { "countRows": true, "enablePagination": true, "fields": [], "show": true },
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Last Updated", "desc": true }]
+      },
+      "title": "Latest MIB Data Cache (Trap / Inform / BulkGet / Polling)",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT target AS \"Target\", state_key AS \"MIB / OID\", new_value AS \"Current Value\", old_value AS \"Previous Value\", trigger AS \"Acquisition Source (Trap/Inform/BulkGet)\", created_at AS \"Last Updated\" FROM state_transition_logs WHERE $__timeFilter(created_at) AND ('$target' = 'All' OR target = '$target') AND ('$trigger' = 'All' OR trigger = '$trigger') AND ('$search' = '' OR state_key ILIKE '%' || '$search' || '%' OR target ILIKE '%' || '$search' || '%') ORDER BY created_at DESC LIMIT 2000;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": true,
+            "inspect": true
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "id": 6,
+      "options": {
+        "footer": { "countRows": true, "enablePagination": true, "fields": [], "show": true },
+        "showHeader": true
+      },
+      "title": "Target Inventory & Real-time Status",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT name AS \"Target Name\", host AS \"Host Address\", port AS \"Port\", status AS \"Status\", credential_id AS \"Credential Profile\", updated_at AS \"Last Heartbeat\" FROM targets WHERE ('$target' = 'All' OR name = '$target') ORDER BY name ASC;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "lineInterpolation": "smooth", "lineWidth": 1 },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "id": 7,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "lastNotNull"] } },
+      "title": "SNMP Trap & Inform Reception Rate",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "expr": "sum by (type, target) (musubi_snmp_traps_total)", "legendFormat": "{{target}} [{{type}}]", "refId": "A" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "id": 300,
+      "title": "⚡ Scenario Executions, Job Analytics & Audit Trail",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": true,
+            "inspect": true
+          }
+        }
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 29 },
+      "id": 8,
+      "options": {
+        "footer": { "countRows": true, "enablePagination": true, "fields": [], "show": true },
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Started At", "desc": true }]
+      },
+      "title": "Scenario Job Execution History & Verdicts",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT id AS \"Job ID\", scenario_id AS \"Scenario Name\", scenario_version AS \"Version\", status AS \"Execution Verdict\", triggered_by AS \"Triggered By\", created_at AS \"Started At\" FROM jobs WHERE $__timeFilter(created_at) AND ('$status' = 'All' OR status = '$status') AND ('$search' = '' OR scenario_id ILIKE '%' || '$search' || '%' OR id ILIKE '%' || '$search' || '%') ORDER BY created_at DESC LIMIT 2000;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "filterable": true,
+            "inspect": true
+          }
+        }
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 29 },
+      "id": 9,
+      "options": {
+        "footer": { "countRows": true, "enablePagination": true, "fields": [], "show": true },
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Timestamp", "desc": true }]
+      },
+      "title": "Recent Administrative & API Audit Trail",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS \"Timestamp\", user_id AS \"User\", role AS \"Role\", action AS \"Action\", target_id AS \"Target / Resource\", ip AS \"Client IP\" FROM audit_logs WHERE $__timeFilter(created_at) AND ('$target' = 'All' OR target_id = '$target') AND ('$search' = '' OR action ILIKE '%' || '$search' || '%' OR user_id ILIKE '%' || '$search' || '%') ORDER BY created_at DESC LIMIT 2000;",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["musubi", "snmp", "orchestration", "telemetry"],
+  "templating": {
+    "list": [
+      {
+        "allValue": "All",
+        "current": { "selected": true, "text": "All", "value": "All" },
+        "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+        "definition": "SELECT name FROM targets ORDER BY name;",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Target Device",
+        "multi": false,
+        "name": "target",
+        "options": [],
+        "query": "SELECT name FROM targets ORDER BY name;",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": { "selected": true, "text": "All", "value": "All" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Trigger Source",
+        "multi": false,
+        "name": "trigger",
+        "options": [
+          { "selected": true, "text": "All", "value": "All" },
+          { "selected": false, "text": "TRAP", "value": "TRAP" },
+          { "selected": false, "text": "INFORM", "value": "INFORM" },
+          { "selected": false, "text": "BULK_GET", "value": "BULK_GET" },
+          { "selected": false, "text": "POLLING", "value": "POLLING" },
+          { "selected": false, "text": "SET", "value": "SET" },
+          { "selected": false, "text": "API", "value": "API" }
+        ],
+        "query": "All, TRAP, INFORM, BULK_GET, POLLING, SET, API",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": "All",
+        "current": { "selected": true, "text": "All", "value": "All" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job Status",
+        "multi": false,
+        "name": "status",
+        "options": [
+          { "selected": true, "text": "All", "value": "All" },
+          { "selected": false, "text": "SUCCESS", "value": "SUCCESS" },
+          { "selected": false, "text": "FAILED", "value": "FAILED" },
+          { "selected": false, "text": "RUNNING", "value": "RUNNING" },
+          { "selected": false, "text": "QUEUED", "value": "QUEUED" },
+          { "selected": false, "text": "ABORTED", "value": "ABORTED" }
+        ],
+        "query": "All, SUCCESS, FAILED, RUNNING, QUEUED, ABORTED",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": { "selected": false, "value": "" },
+        "hide": 0,
+        "label": "Search Filter",
+        "name": "search",
+        "options": [{ "selected": true, "value": "" }],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m"] },
+  "timezone": "browser",
+  "title": "Go Template - Network Orchestration & SNMP Observability",
+  "uid": "template-overview",
+  "version": 4
+}
