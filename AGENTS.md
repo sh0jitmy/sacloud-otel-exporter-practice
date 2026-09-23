@@ -4,12 +4,14 @@ This document provides behavioral constraints, architectural conventions, and ex
 
 ## Repository Overview
 
-`go_template` is an enterprise-grade Go repository template providing:
-1. **Zero-npm Standalone HTMX Dashboard & SSG**: High-performance UI server (`internal/web`) using `//go:embed`, local HTMX (`static/js/htmx.min.js`), and pre-rendered static site export.
-2. **SQLite Governance & Reliability**: CGO-free WAL-mode persistence, SHA-256 verified backup archives (`tar.gz`), atomic transactional restore, and retention cleaner.
-3. **Multi-Tier E2E Testing Framework**: Fast No-Docker SQLite E2E (`make sqlite-e2e`), Headless Chrome frontend UI assertions (`make frontend-e2e`), and Docker Compose full-stack E2E (`make docker-e2e`).
-4. **Production Observability**: VictoriaMetrics, Prometheus metric endpoint (`/metrics`), pprof (`127.0.0.1:6060`), and pre-provisioned Grafana dashboards (`deploy/grafana/`).
-5. **SSOT Version Management**: Version centrally defined in `internal/version/version.go`, Go version unified across GitHub Actions and `go.mod` via `go-version-file: 'go.mod'`, release automation via GoReleaser v2.
+`sacloud-otel-exporter-practice` provides:
+1. **Sakura Cloud Object Storage × OpenTelemetry Collector Integration**: S3-compatible log streaming via `sacloud-otel-collector` (`awss3` exporter) to Sakura Cloud Object Storage (`tky01` / `isk01`), Docker container log pipeline (`filelog` receiver), and JST timezone partitioning (`logs/%Y/%m/%d/%H/`).
+2. **Pure Go Verification Tooling**: `cmd/verifier` & `internal/otels3` providing automated 1-command verification (`make verify-sakura`, `make verify-docker-log-sakura`) with gzip decompression and OTLP / Docker JSON ID assertion.
+3. **Zero-npm Standalone HTMX Dashboard & SSG**: High-performance UI server (`internal/web`) using `//go:embed`, local HTMX (`static/js/htmx.min.js`), and pre-rendered static site export.
+4. **SQLite Governance & Reliability**: CGO-free WAL-mode persistence, SHA-256 verified backup archives (`tar.gz`), atomic transactional restore, and retention cleaner.
+5. **Multi-Tier E2E Testing Framework**: Fast No-Docker SQLite E2E (`make sqlite-e2e`), Headless Chrome frontend UI assertions (`make frontend-e2e`), Docker Compose full-stack E2E (`make docker-e2e`), and S3 storage E2E (`make verify-sakura`).
+6. **Production Observability**: VictoriaMetrics, Prometheus metric endpoint (`/metrics`), pprof (`127.0.0.1:6060`), and pre-provisioned Grafana dashboards (`deploy/grafana/`).
+7. **SSOT Version Management**: Version centrally defined in `internal/version/version.go`, Go version unified across GitHub Actions and `go.mod` via `go-version-file: 'go.mod'`, release automation via GoReleaser v2.
 
 ---
 
@@ -38,6 +40,12 @@ This document provides behavioral constraints, architectural conventions, and ex
 make generate
 make fmt
 make lint
+
+# Sakura Cloud Object Storage & OTel Verification
+make verify-sakura            # 1-command all-in-one Sakura Cloud Object Storage verification
+make verify-docker-log-sakura # Docker container log pipeline verification to Sakura Cloud
+make verify-otel-local        # LocalStack S3 verification (Local E2E)
+make verify-docker-log-local  # LocalStack Docker log pipeline verification
 
 # Verification & Multi-Tier E2E
 make test            # Unit tests with -race and coverage check

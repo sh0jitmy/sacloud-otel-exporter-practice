@@ -2,8 +2,8 @@
 
 ## プロジェクトの概要
 
-このプロジェクトは、Go開発向けのプロダクション品質テンプレートリポジトリです。
-本リポジトリには、開発の品質・設計・セキュリティ・可観測性を向上させるための**日本語カスタムスキル（`.claude/skills/`）**が同梱されています。
+このプロジェクトは、**さくらのクラウド オブジェクトストレージ（S3互換）× OpenTelemetry Collector (`sacloud-otel-collector`)** による構造化ログおよび Docker コンテナログの集約・検証リポジトリです。
+また、Go開発向けのプロダクション品質テンプレート（HTMX フロントエンド、改変検知 SQLite ガバナンス、多層 E2E テスト）および**日本語カスタムスキル（`.claude/skills/`）**が同梱されています。
 
 ## AIエージェント（Claude Code）への指示
 
@@ -13,6 +13,12 @@
 > - **ライセンスヘッダーの維持**: 新規追加した Go ソースコードには必ず Apache-2.0 ライセンスヘッダーを付与し、`make license-check` をパスさせてください。
 
 ## 開発・検証コマンド一覧
+
+### さくらのクラウド オブジェクトストレージ & OTel 検証
+- **さくらのクラウド 1 コマンド全自動検証**: `make verify-sakura`
+- **Docker コンテナログ収集＆さくら転送検証**: `make verify-docker-log-sakura`
+- **LocalStack ローカル OTLP 検証**: `make verify-otel-local`
+- **LocalStack ローカル Docker ログ検証**: `make verify-docker-log-local`
 
 ### Go開発 & ローカル実行
 - **ローカル一括起動 (API + Web)**: `make run`
@@ -33,3 +39,4 @@
 - **カスタムスキルのインストール**: `make install-all` (Claude & Antigravity)
 - **プロジェクトの要件セルフチェック**: `make self-eval`
 - **スキルの構文検証**: `make check`
+
