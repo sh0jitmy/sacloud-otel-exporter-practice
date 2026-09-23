@@ -42,3 +42,13 @@ data/
 cmd/app/data/
 test_reports/
 coverage.out
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Resolved collector configs (contain resolved secrets / bucket names)
+*.resolved.yaml
+*.resolved.yml
+

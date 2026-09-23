@@ -1,0 +1,70 @@
+name: otel-s3-verification
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: otel-s3-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - otel-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: otel-s3-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mc alias set local http://minio:9000 minioadmin minioadmin
+        mc mb --ignore-existing local/otel-logs
+        echo "Bucket otel-logs initialized successfully"
+    networks:
+      - otel-net
+
+  collector:
+    image: sacloud-otel-collector:local
+    build:
+      context: ./sacloud-otel-collector
+      dockerfile: Dockerfile
+    container_name: otel-s3-collector
+    restart: unless-stopped
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./sacloud-otel-collector/config.local.yaml:/etc/sacloud-otel-collector/config.yaml:ro
+    environment:
+      TZ: ${TZ:-Asia/Tokyo}
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+      AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+      S3_ENDPOINT: http://minio:9000
+      SACLOUD_O2_BUCKET: otel-logs
+      SACLOUD_O2_PREFIX: logs
+      SACLOUD_O2_REGION: jp-north-1
+    command: ["--config", "/etc/sacloud-otel-collector/config.yaml"]
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - otel-net
+
+networks:
+  otel-net:
+    driver: bridge

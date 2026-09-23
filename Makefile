@@ -1,6 +1,6 @@
 # Makefile for Go Development & Custom Skills Management
 
-.PHONY: help check install install-agents install-all self-eval generate test fmt lint tidy vulncheck build release-check release-snapshot license-check license-add migration-diff clean openapi-lint publish-pr ai-pr run sqlite-e2e frontend-e2e docker-e2e ssg-build demo
+.PHONY: help check install install-agents install-all self-eval generate test fmt lint tidy vulncheck build build-verifier install-collector-host run-collector-host-local run-collector-host-sakura verify-sakura verify-otel-local verify-otel-host verify-otel-sakura release-check release-snapshot license-check license-add migration-diff clean openapi-lint publish-pr ai-pr run sqlite-e2e frontend-e2e docker-e2e ssg-build demo
 
 help:
 	@echo "Available commands:"
@@ -12,13 +12,22 @@ help:
 	@echo "    tidy             Run go mod tidy"
 	@echo "    vulncheck        Run govulncheck vulnerability scanner"
 	@echo "    test             Run Go tests with race detector and coverage"
-	@echo "    build            Build binaries to bin/app and bin/web"
+	@echo "    build            Build binaries to bin/app, bin/web, and bin/verifier"
+	@echo "    build-verifier   Build sacloud-otel-verifier CLI binary"
 	@echo "    run              Run local standalone stack (Core API + Web Dashboard)"
 	@echo "    sqlite-e2e       Run fast standalone SQLite E2E test (No-Docker)"
 	@echo "    frontend-e2e     Run standalone HTMX frontend E2E test & snapshot suite"
 	@echo "    docker-e2e       Run full-stack Docker Compose E2E test & Grafana assertions"
 	@echo "    ssg-build        Generate pre-rendered static site HTML and assets (SSG)"
 	@echo "    demo             Launch full-stack interactive demo with seeded data"
+	@echo "  Sakura OTel & S3 Exporter Verification:"
+	@echo "    verify-sakura             ★ All-in-one 1-command verification (Collector auto-start, test, cleanup)"
+	@echo "    install-collector-host    Download official sacloud-otel-collector binary for current OS (macOS/Linux)"
+	@echo "    run-collector-host-local  Run sacloud-otel-collector on host pointing to local MinIO"
+	@echo "    run-collector-host-sakura Run sacloud-otel-collector on host pointing to Sakura Cloud Object Storage"
+	@echo "    verify-otel-local         Full E2E verification with Docker Compose (MinIO + Collector + Verifier)"
+	@echo "    verify-otel-host          Verify host-based Collector and Storage delivery"
+	@echo "    verify-otel-sakura        Verify delivery to real Sakura Cloud Object Storage"
 	@echo "    release-check    Validate GoReleaser configuration"
 	@echo "    release-snapshot Run GoReleaser snapshot build"
 	@echo "    license-check    Verify license & author headers in Go files"
@@ -79,6 +88,48 @@ build: generate
 	@mkdir -p bin
 	@go build -v -o bin/app ./cmd/app
 	@go build -v -o bin/web ./cmd/web
+	@go build -v -o bin/verifier ./cmd/verifier
+
+build-verifier:
+	@echo "==> Building sacloud-otel-verifier..."
+	@mkdir -p bin
+	@go build -v -o bin/verifier ./cmd/verifier
+
+install-collector-host:
+	@echo "==> Installing sacloud-otel-collector for host..."
+	@bash scripts/install_collector_host.sh bin
+
+run-collector-host-local: install-collector-host
+	@echo "==> Running sacloud-otel-collector on host (local config)..."
+	@bash scripts/run_collector_host.sh deploy/sacloud-otel-collector/config.local.yaml bin/sacloud-otel-collector
+
+run-collector-host-sakura: install-collector-host
+	@echo "==> Running sacloud-otel-collector on host (Sakura Object Storage config)..."
+	@bash scripts/run_collector_host.sh deploy/sacloud-otel-collector/config.sakura.yaml bin/sacloud-otel-collector
+
+verify-sakura: build-verifier
+	@echo "==> Running all-in-one Sakura Cloud Object Storage verification..."
+	@bash scripts/verify_sakura_all_in_one.sh
+
+verify-otel-local: build-verifier
+	@echo "==> Running local OTel ➔ MinIO (S3) E2E verification..."
+	@bash scripts/verify_otel_local.sh
+
+verify-otel-host: build-verifier
+	@echo "==> Running host-based OTel ➔ S3 verification..."
+	@bash scripts/verify_otel_host.sh
+
+verify-otel-sakura: build-verifier
+	@echo "==> Running OTel ➔ Sakura Cloud Object Storage verification..."
+	@bash scripts/verify_otel_host.sh
+
+verify-docker-log-sakura: build-verifier
+	@echo "==> Running Docker container log collection & Sakura Cloud Object Storage verification..."
+	@bash scripts/verify_docker_log.sh sakura
+
+verify-docker-log-local: build-verifier
+	@echo "==> Running Docker container log collection & Local MinIO verification..."
+	@bash scripts/verify_docker_log.sh local
 
 run: build
 	@echo "==> Starting local standalone servers..."
