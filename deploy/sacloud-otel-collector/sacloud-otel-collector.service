@@ -1,0 +1,21 @@
+[Unit]
+Description=sacloud-otel-collector OpenTelemetry Collector Daemon
+Documentation=https://github.com/sacloud/sacloud-otel-collector
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/sacloud-otel-collector --config /etc/sacloud-otel-collector/config.yaml
+Restart=always
+RestartSec=5s
+LimitNOFILE=65536
+
+# Environment variables for Sakura Cloud Object Storage and S3 compatibility
+EnvironmentFile=-/etc/default/sacloud-otel-collector
+Environment="AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED"
+Environment="AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED"
+
+[Install]
+WantedBy=multi-user.target

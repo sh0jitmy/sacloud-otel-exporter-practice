@@ -1,0 +1,78 @@
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: sacloud-otel-minio-docker
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: sacloud-otel-minio-init-docker
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'waiting for minio...';
+        sleep 1;
+      done;
+      /usr/bin/mc mb --ignore-existing local/otel-logs;
+      echo 'Bucket otel-logs created successfully';
+      exit 0;
+      "
+
+  log-producer:
+    image: alpine:latest
+    container_name: sacloud-docker-log-producer-local
+    volumes:
+      - docker-app-logs-local:/var/log/docker-app
+    environment:
+      - TZ=${TZ:-Asia/Tokyo}
+      - TEST_RUN_ID=${TEST_RUN_ID:-run-docker-test}
+      - LOG_COUNT=${LOG_COUNT:-5}
+    command: >
+      sh -c '
+        echo "==> Log Producer started with RUN_ID: $$TEST_RUN_ID, COUNT: $$LOG_COUNT"
+        mkdir -p /var/log/docker-app
+        for i in $$(seq 1 $$LOG_COUNT); do
+          NOW=$$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          echo "{\"time\":\"$$NOW\",\"stream\":\"stdout\",\"log\":\"Docker container log record $$i of $$LOG_COUNT for run $$TEST_RUN_ID\",\"run_id\":\"$$TEST_RUN_ID\",\"seq\":$$i,\"container_name\":\"sacloud-docker-log-producer\"}" >> /var/log/docker-app/container.log
+          echo "Emitted log record $$i"
+          sleep 0.2
+        done
+        echo "==> Log emission complete. Keeping container alive for collection..."
+        sleep 3600
+      '
+
+  collector:
+    image: sacloud-otel-collector:local
+    build:
+      context: ./sacloud-otel-collector
+      dockerfile: Dockerfile
+    container_name: sacloud-otel-collector-docker-local
+    depends_on:
+      - minio-init
+      - log-producer
+    volumes:
+      - ./sacloud-otel-collector/config.docker-log.local.yaml:/etc/otelcol/config.yaml:ro
+      - docker-app-logs-local:/var/log/docker-app:ro
+    environment:
+      - TZ=${TZ:-Asia/Tokyo}
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED
+      - AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED
+      - SACLOUD_O2_REGION=jp-north-1
+      - SACLOUD_O2_BUCKET=otel-logs
+      - SACLOUD_O2_PREFIX=logs
+      - S3_ENDPOINT=http://minio:9000
+    command: ["--config", "/etc/otelcol/config.yaml"]
+
+volumes:
+  docker-app-logs-local:
+    name: sacloud-docker-app-logs-local

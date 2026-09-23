@@ -1,0 +1,51 @@
+services:
+  log-producer:
+    image: alpine:latest
+    container_name: sacloud-docker-log-producer
+    volumes:
+      - docker-app-logs:/var/log/docker-app
+    environment:
+      - TZ=${TZ:-Asia/Tokyo}
+      - TEST_RUN_ID=${TEST_RUN_ID:-run-docker-test}
+      - LOG_COUNT=${LOG_COUNT:-5}
+    command: >
+      sh -c '
+        echo "==> Log Producer started with RUN_ID: $$TEST_RUN_ID, COUNT: $$LOG_COUNT"
+        mkdir -p /var/log/docker-app
+        for i in $$(seq 1 $$LOG_COUNT); do
+          NOW=$$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          echo "{\"time\":\"$$NOW\",\"stream\":\"stdout\",\"log\":\"Docker container log record $$i of $$LOG_COUNT for run $$TEST_RUN_ID\",\"run_id\":\"$$TEST_RUN_ID\",\"seq\":$$i,\"container_name\":\"sacloud-docker-log-producer\"}" >> /var/log/docker-app/container.log
+          echo "Emitted log record $$i"
+          sleep 0.2
+        done
+        echo "==> Log emission complete. Keeping container alive for collection..."
+        sleep 3600
+      '
+
+  collector:
+    image: sacloud-otel-collector:local
+    build:
+      context: ./sacloud-otel-collector
+      dockerfile: Dockerfile
+    container_name: sacloud-otel-collector-docker
+    depends_on:
+      - log-producer
+    volumes:
+      - ${COLLECTOR_CONFIG:-./sacloud-otel-collector/config.docker-log.sakura.yaml}:/etc/otelcol/config.yaml:ro
+      - docker-app-logs:/var/log/docker-app:ro
+    environment:
+      - TZ=${TZ:-Asia/Tokyo}
+      - AWS_ACCESS_KEY_ID=${SACLOUD_O2_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${SACLOUD_O2_SECRET_KEY}
+      - AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED
+      - AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED
+      - SACLOUD_O2_ENDPOINT=${SACLOUD_O2_ENDPOINT:-https://s3.tky01.sakurastorage.jp}
+      - SACLOUD_O2_REGION=${SACLOUD_O2_REGION:-jp-north-1}
+      - SACLOUD_O2_BUCKET=${SACLOUD_O2_BUCKET:-otel-logs}
+      - SACLOUD_O2_PREFIX=${SACLOUD_O2_PREFIX:-logs}
+      - S3_ENDPOINT=${S3_ENDPOINT:-http://minio:9000}
+    command: ["--config", "/etc/otelcol/config.yaml"]
+
+volumes:
+  docker-app-logs:
+    name: sacloud-docker-app-logs

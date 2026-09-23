@@ -1,0 +1,48 @@
+# sacloud-otel-collector configuration for Local Testing (MinIO / S3 emulator)
+# https://github.com/sacloud/sacloud-otel-collector
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 85
+    spike_limit_percentage: 25
+
+  # Short timeout and small batch size to ensure fast flushing during tests
+  batch:
+    timeout: 1s
+    send_batch_size: 5
+
+exporters:
+  awss3:
+    s3uploader:
+      endpoint: ${env:S3_ENDPOINT}
+      region: ${env:SACLOUD_O2_REGION}
+      s3_bucket: ${env:SACLOUD_O2_BUCKET}
+      s3_prefix: ${env:SACLOUD_O2_PREFIX}
+      s3_partition_format: '%Y/%m/%d/%H'
+      s3_force_path_style: true
+      disable_ssl: true
+      compression: gzip
+    marshaler: otlp_json
+
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [awss3, debug]
+
+  telemetry:
+    logs:
+      level: info
