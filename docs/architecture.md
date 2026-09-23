@@ -123,6 +123,77 @@ graph LR
     subgraph "Layer 4"
         L4["Docker Compose E2E<br/><code>make docker-e2e</code><br/>- Multi-container Stack<br/>- PostgreSQL + VictoriaMetrics<br/>- Grafana UI & Metric Assertions"]
     end
+    subgraph "Layer 5 (S3 OTel)"
+        L5["S3 Storage E2E<br/><code>make verify-sakura</code><br/><code>make verify-docker-log-sakura</code><br/>- Sakura Cloud Object Storage<br/>- OTLP & Docker JSON Log Verification"]
+    end
     
-    L1 --> L2 --> L3 --> L4
+    L1 --> L2 --> L3 --> L4 --> L5
 ```
+
+---
+
+## 4. OpenTelemetry Collector ログ集約＆S3互換ストレージ転送層
+
+```mermaid
+graph TD
+    subgraph "Log Producers"
+        Service["Go App / Microservices<br/>(otelslog / OTLP gRPC 4317)"]
+        DockerEngine["Docker Engine<br/>(/var/lib/docker/containers/*-json.log)"]
+        VerifierCLI["sacloud-otel-verifier emit<br/>(OTLP gRPC 4317)"]
+    end
+
+    subgraph "sacloud-otel-collector"
+        OTLPRecv["otlp receiver<br/>(gRPC :4317 / HTTP :4318)"]
+        FilelogRecv["filelog receiver<br/>(Tail Read & JSON Parser)"]
+        BatchProc["batch processor<br/>(timeout: 1s-2s)"]
+        S3Exp["awss3 exporter<br/>- gzip compression<br/>- s3_force_path_style: true<br/>- partition: logs/%Y/%m/%d/%H/"]
+    end
+
+    subgraph "Target Storage"
+        SakuraS3["さくらのクラウド オブジェクトストレージ<br/>(isk01 / tky01 Site)"]
+        LocalS3["LocalStack S3<br/>(Local Dev)"]
+    end
+
+    subgraph "Verification Layer (cmd/verifier)"
+        VerifierAssert["sacloud-otel-verifier verify<br/>1. S3 ListObjectsV2 & GetObject<br/>2. gzip Decompression<br/>3. Parse JSON / Extract RunID & TraceID<br/>4. Multi-item Exact Assertion"]
+    end
+
+    Service -->|OTLP gRPC| OTLPRecv
+    VerifierCLI -->|OTLP gRPC| OTLPRecv
+    DockerEngine -->|Tail Read| FilelogRecv
+
+    OTLPRecv --> BatchProc
+    FilelogRecv --> BatchProc
+    BatchProc --> S3Exp
+
+    S3Exp -->|PUT Object (gzip, JST)| SakuraS3
+    S3Exp -.->|PUT Object (Local)| LocalS3
+
+    VerifierAssert -->|Fetch & Verify| SakuraS3
+    VerifierAssert -.->|Fetch & Verify| LocalS3
+```
+
+### 4.1 パイプライン構成と設定詳細
+- **`otlp` receiver**: gRPC (`0.0.0.0:4317`) および HTTP (`0.0.0.0:4318`) でアプリケーションからのログを受信。
+- **`filelog` receiver**: Docker コンテナの JSON ログ（`/var/lib/docker/containers/*/*-json.log`）を読み取り、`json_parser` でメッセージ本体を抽出し、コンテナ属性（`container_name`, `image_name` 等）を付与。
+- **`awss3` exporter**:
+  - `s3_force_path_style: true`: さくらのクラウド オブジェクトストレージ等の S3 互換ストレージにおけるパススタイルアクセス。
+  - `compression: gzip`: 帯域およびストレージ容量を最適化。
+  - `partition: "logs/%Y/%m/%d/%H"`: 日付・時間単位での階層パーティショニング。
+
+### 4.2 S3 互換ストレージ向け必須フラグ (AWS SDK v2 互換性)
+Collector は内部で AWS SDK for Go v2 を利用していますが、最新の AWS SDK v2 はデフォルトで S3 フレキシブルチェックサムヘッダー（`x-amz-checksum-crc32` 等）を要求・検証します。さくらのオブジェクトストレージや MinIO などの S3 互換ストレージではこれらが未サポートのため、`400 InvalidDigest` や `NotImplemented` エラーが発生します。
+これを回避するため、以下の環境変数を Collector の実行環境に常時注入しています：
+```bash
+AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED
+AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED
+```
+
+### 4.3 JST (日本時間) タイムゾーン対応
+Docker コンテナ環境が UTC の場合、S3 パーティション（`%H`）が UTC 基準となり、日本時間と 9 時間のズレが生じます。
+本構成では `deploy/sacloud-otel-collector/Dockerfile` に `tzdata` を導入し、Compose / 環境変数で `TZ=Asia/Tokyo` を指定することで、ストレージ内のパーティションが日本時間通りに作成されます。
+
+### 4.4 検証ツール (`cmd/verifier` & `internal/otels3`) の設計
+- **`emitter.go`**: OTel Log SDK (`otelslog`) を用いて、ユニークな `run_id`、TraceID、SpanID、タイムスタンプを付与した構造化ログを Collector へ送出。
+- **`verifier.go`**: AWS SDK for Go v2 を用いてオブジェクトストレージから最新のログオブジェクトを取得し、`gzip` 解凍後、OTLP JSON または Docker JSON ログをパースして `run_id` およびトレース情報の完全一致を自動検証。
+
