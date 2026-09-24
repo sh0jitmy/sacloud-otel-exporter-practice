@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.0.1](https://github.com/sh0jitmy/sacloud-otel-exporter-practice/commits/v0.0.1) - 2026-09-24
+
+- feat(o11y): sacloud-otel-collectorによるさくらのオブジェクトストレージ連携および検証ツールの追加 by @sh0jitmy in https://github.com/sh0jitmy/sacloud-otel-exporter-practice/pull/6
+- docs: さくらのクラウド オブジェクトストレージ連携および検証機能に関するドキュメント・READMEの反映 by @sh0jitmy in https://github.com/sh0jitmy/sacloud-otel-exporter-practice/pull/8
+- Feat/sacloud otel s3 verification by @sh0jitmy in https://github.com/sh0jitmy/sacloud-otel-exporter-practice/pull/9
+
 ## [v0.0.2](https://github.com/sh0jitmy/go_template/compare/v0.0.1...v0.0.2) - 2026-06-28
 
 - add terraform and coverage check  by @sh0jitmy in https://github.com/sh0jitmy/go_template/pull/8
