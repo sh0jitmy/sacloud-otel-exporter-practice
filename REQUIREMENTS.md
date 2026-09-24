@@ -37,10 +37,19 @@
 - [x] **R-3.7 AI カスタムスキル体系の整備 (Claude & Antigravity 両対応)**: 26種類の専門スキルが `.claude/skills/` および `.agents/skills/` に配備され、`make check` により構文検証をパスすること。
 - [x] **R-3.8 リリース管理＆Go バージョン SSOT**: `go-version-file: 'go.mod'` により Go バージョンを `go.mod` に一元管理し、`internal/version/version.go` から GoReleaser v2 `-ldflags` によるメタデータ埋め込みが実装されていること。
 
+### 4. さくらのクラウド オブジェクトストレージ × OpenTelemetry Collector 連携
+- [x] **R-4.1 OTLP ログのさくらのクラウド オブジェクトストレージ転送**: `sacloud-otel-collector` の `awss3` exporter を用いて、OTLP gRPC/HTTP ログを gzip 圧縮してオブジェクトストレージ（東京第1 / 石狩サイト）へパススタイルアクセスで転送できること。
+- [x] **R-4.2 Docker コンテナログ収集パイプライン**: `filelog` receiver により Docker JSON ログ（`/var/lib/docker/containers/*/*-json.log`）を収集し、JSON パースおよび属性マッピング（`container_name`, `run_id` 等）を構造化できること。
+- [x] **R-4.3 S3 互換ストレージ向けチェックサム最適化**: AWS SDK v2 のチェックサム制御フラグ（`AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED`, `AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED`）を自動注入し、`400 InvalidDigest` / `NotImplemented` エラーを防止できること。
+- [x] **R-4.4 JST タイムゾーン対応パーティショニング**: Dockerfile での `tzdata` 導入と `TZ=Asia/Tokyo` 設定により、ストレージ内のパーティション（`logs/%Y/%m/%d/%H/`）が日本時間基準で正しく作成されること。
+- [x] **R-4.5 純Go製 E2E 検証ツール (`sacloud-otel-verifier`)**: OTLP 送出、ストレージからのオブジェクト自動取得、gzip 解凍、OTLP JSON / Docker JSON ログのパース、ID 突合アサーションを実行する検証 CLI が実装されていること。
+- [x] **R-4.6 1コマンド全自動検証ターゲット**: `make verify-sakura`, `make verify-docker-log-sakura`, `make verify-otel-local` などにより、Collector の起動からログ送出、突合アサーション、終了処理までを 1 コマンドで全自動実行できること。
+
 ---
 
 ## 📈 自己評価結果
 
-- **合計要件数**: 26
-- **達成要件数**: 26 / 26
-- **適合率 (達成数/26)**: 100.00 %
+- **合計要件数**: 32
+- **達成要件数**: 32 / 32
+- **適合率 (達成数/32)**: 100.00 %
+
